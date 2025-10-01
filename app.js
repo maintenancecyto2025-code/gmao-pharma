@@ -1,102 +1,87 @@
-// Fonction de hash SHA-256 (native JS)
+// Fonction pour hasher le mot de passe en SHA-256
 async function hash(str) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded',()=>{
   const API_URL = 'https://script.google.com/macros/s/AKfycbyf4LlVgXowmFIxlrpeGSiXfVS6N7rZCrteginEm0J3VvasuRAZwnauSq34XE1TNjg6fA/exec';
-  const el = id => document.getElementById(id);
-
-  // Appel Apps Script via JSONP GET (CORS friendly)
-  function api(action, data = {}) {
-    return new Promise(async (resolve, reject) => {
-      const callbackName = 'cb_' + Math.random().toString(36).slice(2);
-      window[callbackName] = result => {
-        delete window[callbackName];
-        resolve(result);
-      };
-      const params = new URLSearchParams({
-        action,
-        data: JSON.stringify(data),
-        callback: callbackName
-      });
-      const script = document.createElement('script');
-      script.src = API_URL + '?' + params.toString();
-      script.onerror = () => {
-        delete window[callbackName];
-        reject(new Error('Erreur réseau'));
-      };
-      document.body.appendChild(script);
-    });
-  }
+  const el = id=>document.getElementById(id);
+  const api = (action,data={})=> fetch(API_URL,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action,...data})
+  }).then(r=>r.json());
 
   // show/hide
-  const show = i => el(i).classList.remove('hidden');
-  const hide = i => el(i).classList.add('hidden');
-  const clearList = i => el(i).innerHTML = '';
+  const show = i=>el(i).classList.remove('hidden');
+  const hide = i=>el(i).classList.add('hidden');
+  const clearList = i=>el(i).innerHTML='';
 
   // LOGIN
-  el('loginBtn').onclick = async () => {
+  el('loginBtn').onclick = async ()=>{
     el('loginError').textContent = '';
     const email = el('emailInput').value.trim();
-    const pwd = el('pwdInput').value.trim();
-    if (!email || !pwd) return el('loginError').textContent = 'Email & mdp requis';
+    const pwd   = el('pwdInput').value.trim();
+    if(!email||!pwd) return el('loginError').textContent='Email & mdp requis';
+
+    // Hashage du mot de passe AVANT envoi
     const hashedPwd = await hash(pwd);
+
     try {
-      const res = await api('login', { email, password: hashedPwd });
-      if (res.success) {
+      const res = await api('login',{email,password:hashedPwd});
+      if(res.success){
         hide('loginBox'); show('appBox');
         loadKPI();
-      } else el('loginError').textContent = res.error;
+      } else el('loginError').textContent=res.error;
     } catch {
-      el('loginError').textContent = 'Erreur réseau';
+      el('loginError').textContent='Erreur réseau';
     }
   };
 
   // LOGOUT
-  el('logoutBtn').onclick = () => { hide('appBox'); show('loginBox'); };
+  el('logoutBtn').onclick = ()=>{hide('appBox');show('loginBox');};
 
   // NAV
-  document.querySelectorAll('nav a').forEach(a => {
-    a.onclick = e => {
+  document.querySelectorAll('nav a').forEach(a=>{
+    a.onclick = e=>{
       e.preventDefault();
-      document.querySelectorAll('nav a').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('nav a').forEach(x=>x.classList.remove('active'));
       a.classList.add('active');
-      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
       show(a.dataset.sec);
     };
   });
 
   // KPI
   el('refreshKPI').onclick = loadKPI;
-  async function loadKPI() {
+  async function loadKPI(){
     clearList('kpiList');
     try {
-      const all = await api('getAll', { tab: 'WorkOrders' });
-      [['Ouverts', all.filter(o => !o.report).length],
-       ['Retard', all.filter(o => Date.now() - +o.date > 86400000).length]]
-      .forEach(([l, v]) => {
-        const li = document.createElement('li');
-        li.textContent = `${l}: ${v}`; el('kpiList').append(li);
+      const all = await api('getAll',{tab:'WorkOrders'});
+      [['Ouverts',all.filter(o=>!o.report).length],
+       ['Retard',all.filter(o=>Date.now()-+o.date>86400000).length]]
+      .forEach(([l,v])=>{
+        const li=document.createElement('li');
+        li.textContent=`${l}: ${v}`; el('kpiList').append(li);
       });
     } catch { alert('Erreur KPI'); }
   }
 
   // LISTES
-  const bind = (btnId, listId, tab) => el(btnId).onclick = async () => {
+  const bind = (btnId,listId,tab)=> el(btnId).onclick=async()=>{
     clearList(listId);
     try {
-      const arr = await api('getAll', { tab });
-      arr.forEach(o => {
-        const li = document.createElement('li');
-        li.textContent = Object.values(o).join(' – ');
+      const arr = await api('getAll',{tab});
+      arr.forEach(o=>{
+        const li=document.createElement('li');
+        li.textContent=Object.values(o).join(' – ');
         el(listId).append(li);
       });
     } catch { alert(`Erreur ${tab}`); }
   };
-  bind('loadWO', 'woList', 'WorkOrders');
-  bind('loadStocks', 'stocksList', 'Stocks');
-  bind('loadDocs', 'docsList', 'Docs');
-  bind('loadUsers', 'usersList', 'Users');
+  bind('loadWO','woList','WorkOrders');
+  bind('loadStocks','stocksList','Stocks');
+  bind('loadDocs','docsList','Docs');
+  bind('loadUsers','usersList','Users');
 });
