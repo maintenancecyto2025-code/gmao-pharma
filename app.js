@@ -1,46 +1,52 @@
-document.addEventListener('DOMContentLoaded',()=>{
-  const el = id=>document.getElementById(id);
-  // Helper JSONP
-  function api(action,data={},cb){
-    const cbName = 'cb'+Math.random().toString(36).substr(2,8);
-    window[cbName] = res=>{
-      delete window[cbName];
-      cb(res);
-    };
-    const script = document.createElement('script');
-    script.src = `${API_URL}?action=${action}&data=${encodeURIComponent(JSON.stringify(data))}&callback=${cbName}`;
-    document.body.appendChild(script);
-  }
-  // SHA-256 hashing (client-side, for demo only; real hash server-side)
-  async function hash(str){
-    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
-    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-  }
+// Cette fonction permet de calculer le hash SHA-256 d’un texte (mot de passe)
+async function hash(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
 
-  // UI helpers
+document.addEventListener('DOMContentLoaded',()=>{
+  // Adresse de ton API Google Apps Script
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxheHKevjLd_zTIVSzBwkYJfvmGWem8-C1H7iZW0Qs7HjdL5BM8lLOpTnes7xnlicew0A/exec';
+  const el = id=>document.getElementById(id);
+
+  // Fonction d’appel à l’API
+  const api = (action,data={})=> fetch(API_URL,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action,...data})
+  }).then(r=>r.json());
+
+  // Afficher/masquer une partie du site
   const show = i=>el(i).classList.remove('hidden');
   const hide = i=>el(i).classList.add('hidden');
   const clearList = i=>el(i).innerHTML='';
 
-  // LOGIN
+  // --- LOGIN ---
   el('loginBtn').onclick = async ()=>{
     el('loginError').textContent = '';
     const email = el('emailInput').value.trim();
     const pwd   = el('pwdInput').value.trim();
     if(!email||!pwd) return el('loginError').textContent='Email & mdp requis';
+
+    // Hashage du mot de passe AVANT l’envoi
     const hashedPwd = await hash(pwd);
-    api('login',{email,password:hashedPwd}, res=>{
+
+    try {
+      // On envoie l’email et le hash du mdp au serveur
+      const res = await api('login',{email,password:hashedPwd});
       if(res.success){
         hide('loginBox'); show('appBox');
-        window.USER = res.user;
         loadKPI();
       } else el('loginError').textContent=res.error;
-    });
+    } catch {
+      el('loginError').textContent='Erreur réseau';
+    }
   };
-  // LOGOUT
+
+  // --- LOGOUT ---
   el('logoutBtn').onclick = ()=>{hide('appBox');show('loginBox');};
 
-  // NAV
+  // --- NAVIGATION ---
   document.querySelectorAll('nav a').forEach(a=>{
     a.onclick = e=>{
       e.preventDefault();
@@ -51,73 +57,35 @@ document.addEventListener('DOMContentLoaded',()=>{
     };
   });
 
-  // KPI
+  // --- KPI ---
   el('refreshKPI').onclick = loadKPI;
-  function loadKPI(){
+  async function loadKPI(){
     clearList('kpiList');
-    api('getKPI',{}, res=>{
-      if(res.kpi){
-        Object.entries(res.kpi).forEach(([l,v])=>{
-          const li=document.createElement('li');
-          li.textContent=`${l}: ${v}`; el('kpiList').append(li);
-        });
-      }
-    });
+    try {
+      const all = await api('getAll',{tab:'WorkOrders'});
+      [['Ouverts',all.filter(o=>!o.report).length],
+       ['Retard',all.filter(o=>Date.now()-+o.date>86400000).length]]
+      .forEach(([l,v])=>{
+        const li=document.createElement('li');
+        li.textContent=`${l}: ${v}`; el('kpiList').append(li);
+      });
+    } catch { alert('Erreur KPI'); }
   }
-  el('exportPDF').onclick = ()=>api('exportPDF',{},res=>{window.open(res.url)});
 
-  // USERS
-  el('loadUsers').onclick = ()=>{ clearList('usersList');
-    api('getUsers',{},res=>{
-      res.users.forEach(u=>{
+  // --- LISTES ---
+  const bind = (btnId,listId,tab)=> el(btnId).onclick=async()=>{
+    clearList(listId);
+    try {
+      const arr = await api('getAll',{tab});
+      arr.forEach(o=>{
         const li=document.createElement('li');
-        li.textContent=`${u.nom} (${u.role})`;
-        el('usersList').append(li);
+        li.textContent=Object.values(o).join(' – ');
+        el(listId).append(li);
       });
-    });
+    } catch { alert(`Erreur ${tab}`); }
   };
-
-  // OT
-  el('loadWO').onclick = ()=>{ clearList('woList');
-    api('getOT',{},res=>{
-      res.ot.forEach(o=>{
-        const li=document.createElement('li');
-        li.textContent=`${o.type} - ${o.equipement} - ${o.date} - ${o.status}`;
-        el('woList').append(li);
-      });
-    });
-  };
-
-  // DOCS
-  el('loadDocs').onclick = ()=>{ clearList('docsList');
-    api('getDocs',{},res=>{
-      res.docs.forEach(d=>{
-        const li=document.createElement('li');
-        li.textContent=`${d.nom} v${d.version} - ${d.equipement}`;
-        el('docsList').append(li);
-      });
-    });
-  };
-
-  // STOCKS
-  el('loadStocks').onclick = ()=>{ clearList('stocksList');
-    api('getStocks',{},res=>{
-      res.stocks.forEach(s=>{
-        const li=document.createElement('li');
-        li.textContent=`${s.ref} - ${s.fournisseur} - ${s.qte} (seuil: ${s.seuil})`;
-        el('stocksList').append(li);
-      });
-    });
-  };
-
-  // EVALS
-  el('loadEvals').onclick = ()=>{ clearList('evalsList');
-    api('getEvals',{},res=>{
-      res.evals.forEach(e=>{
-        const li=document.createElement('li');
-        li.textContent=`${e.nom} - ${e.date} - ${e.resultat}`;
-        el('evalsList').append(li);
-      });
-    });
-  };
+  bind('loadWO','woList','WorkOrders');
+  bind('loadStocks','stocksList','Stocks');
+  bind('loadDocs','docsList','Docs');
+  bind('loadUsers','usersList','Users');
 });
