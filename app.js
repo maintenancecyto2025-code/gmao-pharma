@@ -5,32 +5,8 @@ async function hash(str) {
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
-  // Nouvelle URL de ton Apps Script
-  const API_URL = 'https://script.google.com/macros/s/AKfycbyf4LlVgXowmFIxlrpeGSiXfVS6N7rZCrteginEm0J3VvasuRAZwnauSq34XE1TNjg6fA/exec';
+  const API_URL = 'https://sheetdb.io/api/v1/brvsvor1tu0sz';
   const el = id=>document.getElementById(id);
-
-  // Fonction d'appel JSONP GET vers Apps Script
-  function api(action, data = {}) {
-    return new Promise(async (resolve, reject) => {
-      const cbName = 'cb_' + Math.random().toString(36).slice(2);
-      window[cbName] = result => {
-        delete window[cbName];
-        resolve(result);
-      };
-      const params = new URLSearchParams({
-        action,
-        data: JSON.stringify(data),
-        callback: cbName
-      });
-      const script = document.createElement('script');
-      script.src = API_URL + '?' + params.toString();
-      script.onerror = () => {
-        delete window[cbName];
-        reject(new Error('Erreur réseau'));
-      };
-      document.body.appendChild(script);
-    });
-  }
 
   // show/hide
   const show = i=>el(i).classList.remove('hidden');
@@ -47,12 +23,17 @@ document.addEventListener('DOMContentLoaded',()=>{
     // Hashage du mot de passe AVANT envoi
     const hashedPwd = await hash(pwd);
 
+    // Recherche utilisateur par email, hash, actif=oui
     try {
-      const res = await api('login',{email,password:hashedPwd});
-      if(res.success){
+      const url = `${API_URL}/search?email=${encodeURIComponent(email)}&password_hash=${hashedPwd}&actif=oui`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if(data.length>0){
         hide('loginBox'); show('appBox');
         loadKPI();
-      } else el('loginError').textContent=res.error;
+      }else{
+        el('loginError').textContent='Identifiants invalides ou utilisateur inactif';
+      }
     } catch {
       el('loginError').textContent='Erreur réseau';
     }
@@ -77,9 +58,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   async function loadKPI(){
     clearList('kpiList');
     try {
-      const all = await api('getAll',{tab:'WorkOrders'});
+      // Charge tous les OT
+      const res = await fetch(`${API_URL}/WorkOrders`);
+      const all = await res.json();
       [['Ouverts',all.filter(o=>!o.report).length],
-       ['Retard',all.filter(o=>Date.now()-+o.date>86400000).length]]
+       ['Retard',all.filter(o=>Date.now()-new Date(o.date).getTime()>86400000).length]]
       .forEach(([l,v])=>{
         const li=document.createElement('li');
         li.textContent=`${l}: ${v}`; el('kpiList').append(li);
@@ -91,7 +74,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   const bind = (btnId,listId,tab)=> el(btnId).onclick=async()=>{
     clearList(listId);
     try {
-      const arr = await api('getAll',{tab});
+      const res = await fetch(`${API_URL}/${tab}`);
+      const arr = await res.json();
       arr.forEach(o=>{
         const li=document.createElement('li');
         li.textContent=Object.values(o).join(' – ');
