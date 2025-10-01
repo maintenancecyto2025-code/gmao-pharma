@@ -5,13 +5,32 @@ async function hash(str) {
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
+  // Nouvelle URL de ton Apps Script
   const API_URL = 'https://script.google.com/macros/s/AKfycbyf4LlVgXowmFIxlrpeGSiXfVS6N7rZCrteginEm0J3VvasuRAZwnauSq34XE1TNjg6fA/exec';
   const el = id=>document.getElementById(id);
-  const api = (action,data={})=> fetch(API_URL,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action,...data})
-  }).then(r=>r.json());
+
+  // Fonction d'appel JSONP GET vers Apps Script
+  function api(action, data = {}) {
+    return new Promise(async (resolve, reject) => {
+      const cbName = 'cb_' + Math.random().toString(36).slice(2);
+      window[cbName] = result => {
+        delete window[cbName];
+        resolve(result);
+      };
+      const params = new URLSearchParams({
+        action,
+        data: JSON.stringify(data),
+        callback: cbName
+      });
+      const script = document.createElement('script');
+      script.src = API_URL + '?' + params.toString();
+      script.onerror = () => {
+        delete window[cbName];
+        reject(new Error('Erreur réseau'));
+      };
+      document.body.appendChild(script);
+    });
+  }
 
   // show/hide
   const show = i=>el(i).classList.remove('hidden');
