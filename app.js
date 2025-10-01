@@ -6,7 +6,7 @@ async function hash(str) {
 
 document.addEventListener('DOMContentLoaded',()=>{
   // Adresse de ton API Google Apps Script
-  const API_URL = 'https://script.google.com/macros/s/AKfycbxheHKevjLd_zTIVSzBwkYJfvmGWem8-C1H7iZW0Qs7HjdL5BM8lLOpTnes7xnlicew0A/exec';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbyf4LlVgXowmFIxlrpeGSiXfVS6N7rZCrteginEm0J3VvasuRAZwnauSq34XE1TNjg6fA/exec';
   const el = id=>document.getElementById(id);
 
   // Fonction d’appel à l’API
