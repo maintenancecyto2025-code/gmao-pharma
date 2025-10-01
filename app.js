@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded',()=>{
-  const API_URL = 'https://script.google.com/macros/s/AKfycbxheHKevjLd_zTIVSzBwkYJfvmGWem8-C1H7iZW0Qs7HjdL5BM8lLOpTnes7xnlicew0A/exec';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbysa0N4UVXpSDjWGL3NHvPiSgRDdaAMfCY9OEyDgiNLWWaf-MLhcUBTsw0TwTHdhwoNZg/exec';
   const el = id=>document.getElementById(id);
 
   // show/hide
