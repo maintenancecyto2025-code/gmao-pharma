@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>GMAO Pharma</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="box" id="loginBox">
+    <div class="header">
+      <img src="assets/logo.png" alt="Logo" style="height:40px;">
+      <h2>Connexion GMAO Pharma</h2>
+    </div>
+    <input id="emailInput" type="email" placeholder="Email" autocomplete="username">
+    <input id="pwdInput" type="password" placeholder="Mot de passe" autocomplete="current-password">
+    <button id="loginBtn" class="btn green">Se connecter</button>
+    <div id="loginError" class="error"></div>
+  </div>
+
+  <div class="box hidden" id="appBox">
+    <div class="header">
+      <nav>
+        <a href="#" data-sec="kpiSection" class="active">Dashboard</a>
+        <a href="#" data-sec="usersSection">Utilisateurs</a>
+        <a href="#" data-sec="otSection">Ordres de travail</a>
+        <a href="#" data-sec="docsSection">Documents</a>
+        <a href="#" data-sec="stocksSection">Stocks</a>
+        <a href="#" data-sec="evalSection">Évaluations</a>
+      </nav>
+      <button id="logoutBtn" class="btn red">Déconnexion</button>
+    </div>
+    <div id="kpiSection" class="section active">
+      <h3>Indicateurs & Reporting</h3>
+      <button id="refreshKPI" class="btn green">Rafraîchir</button>
+      <ul id="kpiList"></ul>
+      <button id="exportPDF" class="btn">Export PDF</button>
+      <div id="charts"></div>
+    </div>
+    <div id="usersSection" class="section">
+      <h3>Gestion des utilisateurs</h3>
+      <button id="loadUsers" class="btn green">Charger</button>
+      <ul id="usersList"></ul>
+      <button id="addUserBtn" class="btn">Ajouter utilisateur</button>
+      <div id="userForm" class="hidden"></div>
+    </div>
+    <div id="otSection" class="section">
+      <h3>Ordres de travail</h3>
+      <button id="loadWO" class="btn green">Charger</button>
+      <ul id="woList"></ul>
+      <button id="addOTBtn" class="btn">Créer OT</button>
+      <div id="otForm" class="hidden"></div>
+    </div>
+    <div id="docsSection" class="section">
+      <h3>Documents</h3>
+      <button id="loadDocs" class="btn green">Charger</button>
+      <ul id="docsList"></ul>
+      <button id="addDocBtn" class="btn">Ajouter document</button>
+      <div id="docForm" class="hidden"></div>
+    </div>
+    <div id="stocksSection" class="section">
+      <h3>Pièces & Stocks</h3>
+      <button id="loadStocks" class="btn green">Charger</button>
+      <ul id="stocksList"></ul>
+      <button id="addStockBtn" class="btn">Ajouter pièce</button>
+      <div id="stockForm" class="hidden"></div>
+    </div>
+    <div id="evalSection" class="section">
+      <h3>Évaluations</h3>
+      <button id="loadEvals" class="btn green">Charger</button>
+      <ul id="evalsList"></ul>
+      <button id="addEvalBtn" class="btn">Nouvelle évaluation</button>
+      <div id="evalForm" class="hidden"></div>
+    </div>
+  </div>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
