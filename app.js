@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded',()=>{
-  const API_URL = 'https://script.google.com/macros/s/AKfycbysa0N4UVXpSDjWGL3NHvPiSgRDdaAMfCY9OEyDgiNLWWaf-MLhcUBTsw0TwTHdhwoNZg/exec';
+  const API_URL = 'https://sheetdb.io/api/v1/brvsvor1tu0sz'; // << Ton URL SheetDB.io
   const el = id=>document.getElementById(id);
 
   // show/hide
@@ -13,16 +13,18 @@ document.addEventListener('DOMContentLoaded',()=>{
     const email = el('emailInput').value.trim();
     const pwd   = el('pwdInput').value.trim();
     if(!email||!pwd) return el('loginError').textContent='Email & mdp requis';
+
+    // Recherche utilisateur par email, password et actif=oui
     try {
-      const res = await fetch(API_URL, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action:'login',email,password:pwd})
-      }).then(r=>r.json());
-      if(res.success){
+      const url = `${API_URL}/search?email=${encodeURIComponent(email)}&password=${encodeURIComponent(pwd)}&actif=oui`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if(data.length>0){
         hide('loginBox'); show('appBox');
         loadKPI();
-      } else el('loginError').textContent=res.error;
+      }else{
+        el('loginError').textContent='Identifiants invalides ou utilisateur inactif';
+      }
     } catch {
       el('loginError').textContent='Erreur réseau';
     }
@@ -31,7 +33,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   // LOGOUT
   el('logoutBtn').onclick = ()=>{hide('appBox');show('loginBox');};
 
-  // NAV
+  // NAVIGATION
   document.querySelectorAll('nav a').forEach(a=>{
     a.onclick = e=>{
       e.preventDefault();
@@ -47,13 +49,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   async function loadKPI(){
     clearList('kpiList');
     try {
-      const all = await fetch(API_URL, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action:'getAll',tab:'WorkOrders'})
-      }).then(r=>r.json());
-      [['Ouverts',all.filter(o=>!o.report).length],
-       ['Retard',all.filter(o=>Date.now()-+o.date>86400000).length]]
+      const res = await fetch(`${API_URL}/WorkOrders`);
+      const all = await res.json();
+      // Change ces calculs selon la structure de tes OT !
+      [['Ouverts',all.filter(o=>o.status==="Ouvert").length],
+       ['Retard',all.filter(o=>o.status==="Ouvert" && Date.now()-new Date(o.date).getTime()>86400000).length]]
       .forEach(([l,v])=>{
         const li=document.createElement('li');
         li.textContent=`${l}: ${v}`; el('kpiList').append(li);
@@ -61,15 +61,12 @@ document.addEventListener('DOMContentLoaded',()=>{
     } catch { alert('Erreur KPI'); }
   }
 
-  // LISTES
+  // LISTES GENERIQUES
   const bind = (btnId,listId,tab)=> el(btnId).onclick=async()=>{
     clearList(listId);
     try {
-      const arr = await fetch(API_URL, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action:'getAll',tab})
-      }).then(r=>r.json());
+      const res = await fetch(`${API_URL}/${tab}`);
+      const arr = await res.json();
       arr.forEach(o=>{
         const li=document.createElement('li');
         li.textContent=Object.values(o).join(' – ');
