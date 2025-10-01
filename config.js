@@ -1,5 +1,5 @@
 // Config API Google Apps Script exposé en JSONP
-const API_URL = 'https://script.google.com/macros/s/AKfycbxheHKevjLd_zTIVSzBwkYJfvmGWem8-C1H7iZW0Qs7HjdL5BM8lLOpTnes7xnlicew0A/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwEou6_MzD8d_jCzFuWTCo51ED2M8uI2giR0SEDH9CSjZ4UWmSQDAndUf_1I7jrcnolow/exec';
 // Rôles & permissions
 const ROLES = {
   ADMIN: 'Administrateur',
