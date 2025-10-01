@@ -1,11 +1,5 @@
-// Fonction pour hasher le mot de passe en SHA-256
-async function hash(str) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
-}
-
 document.addEventListener('DOMContentLoaded',()=>{
-  const API_URL = 'https://sheetdb.io/api/v1/brvsvor1tu0sz';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxheHKevjLd_zTIVSzBwkYJfvmGWem8-C1H7iZW0Qs7HjdL5BM8lLOpTnes7xnlicew0A/exec';
   const el = id=>document.getElementById(id);
 
   // show/hide
@@ -19,21 +13,16 @@ document.addEventListener('DOMContentLoaded',()=>{
     const email = el('emailInput').value.trim();
     const pwd   = el('pwdInput').value.trim();
     if(!email||!pwd) return el('loginError').textContent='Email & mdp requis';
-
-    // Hashage du mot de passe AVANT envoi
-    const hashedPwd = await hash(pwd);
-
-    // Recherche utilisateur par email, hash, actif=oui
     try {
-      const url = `${API_URL}/search?email=${encodeURIComponent(email)}&password_hash=${hashedPwd}&actif=oui`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if(data.length>0){
+      const res = await fetch(API_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'login',email,password:pwd})
+      }).then(r=>r.json());
+      if(res.success){
         hide('loginBox'); show('appBox');
         loadKPI();
-      }else{
-        el('loginError').textContent='Identifiants invalides ou utilisateur inactif';
-      }
+      } else el('loginError').textContent=res.error;
     } catch {
       el('loginError').textContent='Erreur réseau';
     }
@@ -58,11 +47,13 @@ document.addEventListener('DOMContentLoaded',()=>{
   async function loadKPI(){
     clearList('kpiList');
     try {
-      // Charge tous les OT
-      const res = await fetch(`${API_URL}/WorkOrders`);
-      const all = await res.json();
+      const all = await fetch(API_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'getAll',tab:'WorkOrders'})
+      }).then(r=>r.json());
       [['Ouverts',all.filter(o=>!o.report).length],
-       ['Retard',all.filter(o=>Date.now()-new Date(o.date).getTime()>86400000).length]]
+       ['Retard',all.filter(o=>Date.now()-+o.date>86400000).length]]
       .forEach(([l,v])=>{
         const li=document.createElement('li');
         li.textContent=`${l}: ${v}`; el('kpiList').append(li);
@@ -74,8 +65,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   const bind = (btnId,listId,tab)=> el(btnId).onclick=async()=>{
     clearList(listId);
     try {
-      const res = await fetch(`${API_URL}/${tab}`);
-      const arr = await res.json();
+      const arr = await fetch(API_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'getAll',tab})
+      }).then(r=>r.json());
       arr.forEach(o=>{
         const li=document.createElement('li');
         li.textContent=Object.values(o).join(' – ');
